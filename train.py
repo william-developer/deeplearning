@@ -9,6 +9,7 @@ from DataUtil import load
 from keras.utils import np_utils, generic_utils
 
 from keras import backend as K
+import datetime
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -212,28 +213,21 @@ def create_inception_resnet_v2(nb_classes=2, scale=True):
     x = inception_resnet_stem(init)
 
     # 10 x Inception Resnet A
-    for i in range(1):
+    for i in range(5):
         x = inception_resnet_v2_A(x, scale_residual=scale)
 
     # Reduction A
     x = reduction_A(x, k=256, l=256, m=384, n=384)
 
     # 20 x Inception Resnet B
-    for i in range(2):
+    for i in range(10):
         x = inception_resnet_v2_B(x, scale_residual=scale)
-
-    # Auxiliary tower
-    aux_out = AveragePooling2D((5, 5), strides=(3, 3))(x)
-    aux_out = Convolution2D(128, 1, 1, border_mode='same', activation='relu')(aux_out)
-    aux_out = Convolution2D(768, 5, 5, activation='relu')(aux_out)
-    aux_out = Flatten()(aux_out)
-    aux_out = Dense(nb_classes, activation='softmax')(aux_out)
 
     # Reduction Resnet B
     x = reduction_resnet_v2_B(x)
 
     # 10 x Inception Resnet C
-    for i in range(1):
+    for i in range(5):
         x = inception_resnet_v2_C(x, scale_residual=scale)
 
     # Average Pooling
@@ -247,17 +241,18 @@ def create_inception_resnet_v2(nb_classes=2, scale=True):
     out = Dense(output_dim=nb_classes, activation='softmax')(x)
 
     model = Model(init, output=out, name='Inception-Resnet-v2')
-    model.compile(loss='categorical_crossentropy', optimizer='adam',class_mode="accuracy")
+    model.compile(loss='categorical_crossentropy', optimizer='adam',metrics=["accuracy"])
     return model
 
 if __name__ == "__main__":
-    #from keras.utils.visualize_util import plot
-
+    now = datetime.datetime.now()
+    print(now.strftime('%Y-%m-%d %H:%M:%S'))
     model = create_inception_resnet_v2()
     data,label = load('train')	
     label=np_utils.to_categorical(label, 2)
     
-    model.fit(data, label, batch_size=32,nb_epoch=10,shuffle=True,verbose=1,validation_split=0.2)
-    model.save('tf-cat-dog-weight.h5')
-
+    model.fit(data, label, batch_size=32,nb_epoch=50,shuffle=True,verbose=1,validation_split=0.2,callbacks=[])
+    model.save('tf-cat-dog-weight-normal.h5')
+    now = datetime.datetime.now()
+    print(now.strftime('%Y-%m-%d %H:%M:%S'))
     #plot(inception_resnet_v2, to_file="Inception ResNet-v2.png", show_shapes=True)
